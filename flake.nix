@@ -215,7 +215,7 @@
     # All packages in the ./packages subfolder are also added to the flake.
     # flake-utils is used for this part to make each package available for each
     # system. This works as all packages are compatible with all architectures
-    (flake-utils.lib.eachSystem [ "aarch64-linux" "i686-linux" "x86_64-linux" ])
+    (flake-utils.lib.eachSystem [ "aarch64-linux" "i686-linux" "x86_64-linux" "aarch64-darwin" ])
       (system:
         let pkgs = nixpkgs.legacyPackages.${system}.extend self.overlays.default;
         in
