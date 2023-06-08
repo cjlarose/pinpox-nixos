@@ -14,6 +14,7 @@
     promterm.inputs = {
       nixpkgs.follows = "nixpkgs";
       utils.follows = "flake-utils";
+      naersk.inputs.nixpkgs.follows = "nixpkgs";
     };
 
     s3photoalbum.url = "github:pinpox/s3photoalbum";
