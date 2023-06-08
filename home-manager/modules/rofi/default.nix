@@ -1,4 +1,4 @@
-{ config, lib, colorscheme, fonts, ... }:
+{ config, lib, ... }:
 with lib;
 let
   cfg = config.pinpox.programs.rofi;
@@ -12,8 +12,8 @@ in
 
       # General
       enable = true;
-      font = "${fonts.family} ${fonts.normal.style} ${
-          toString (fonts.size * 2)
+      font = "${config.pinpox.font.family} ${config.pinpox.font.normal.style} ${
+          toString (config.pinpox.font.size * 2)
         }px";
       cycle = true;
       # extraConfig = "";
@@ -28,38 +28,38 @@ in
       colors = {
 
         window = {
-          background = "#${colorscheme.Black}";
-          # foreground = "#${colorscheme.Black}";
-          separator = "#${colorscheme.Blue}";
-          border = "#${colorscheme.Black}";
+          background = "#${config.pinpox.colors.Black}";
+          # foreground = "#${config.pinpox.colors.Black}";
+          separator = "#${config.pinpox.colors.Blue}";
+          border = "#${config.pinpox.colors.Black}";
         };
 
         rows = {
           normal = {
-            background = "#${colorscheme.Black}";
-            foreground = "#${colorscheme.White}";
-            backgroundAlt = "#${colorscheme.Black}";
+            background = "#${config.pinpox.colors.Black}";
+            foreground = "#${config.pinpox.colors.White}";
+            backgroundAlt = "#${config.pinpox.colors.Black}";
             highlight = {
-              background = "#${colorscheme.Grey}";
-              foreground = "#${colorscheme.DarkGreen}";
+              background = "#${config.pinpox.colors.BrightBlack}";
+              foreground = "#${config.pinpox.colors.DarkGreen}";
             };
           };
           active = {
-            background = "#${colorscheme.Black}";
-            foreground = "#${colorscheme.Blue}";
-            backgroundAlt = "#${colorscheme.Black}";
+            background = "#${config.pinpox.colors.Black}";
+            foreground = "#${config.pinpox.colors.Blue}";
+            backgroundAlt = "#${config.pinpox.colors.Black}";
             highlight = {
-              background = "#${colorscheme.Black}";
-              foreground = "#${colorscheme.Blue}";
+              background = "#${config.pinpox.colors.Black}";
+              foreground = "#${config.pinpox.colors.Blue}";
             };
           };
           urgent = {
-            background = "#${colorscheme.Black}";
-            foreground = "#${colorscheme.Red}";
-            backgroundAlt = "#${colorscheme.Black}";
+            background = "#${config.pinpox.colors.Black}";
+            foreground = "#${config.pinpox.colors.Red}";
+            backgroundAlt = "#${config.pinpox.colors.Black}";
             highlight = {
-              background = "#${colorscheme.Black}";
-              foreground = "#${colorscheme.Red}";
+              background = "#${config.pinpox.colors.Black}";
+              foreground = "#${config.pinpox.colors.Red}";
             };
           };
         };

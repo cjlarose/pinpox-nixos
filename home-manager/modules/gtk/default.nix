@@ -1,4 +1,4 @@
-{ config, pkgs, lib, colorscheme, ... }:
+{ config, pkgs, lib, ... }:
 with lib;
 let
 
@@ -18,35 +18,35 @@ let
   materia_colors = pkgs.writeTextFile {
     name = "gtk-generated-colors";
     text = ''
-      BTN_BG=${colorscheme.Grey}
-      BTN_FG=${colorscheme.BrightWhite}
+      BTN_BG=${config.pinpox.colors.BrightBlack}
+      BTN_FG=${config.pinpox.colors.BrightWhite}
 
-      FG=${colorscheme.White}
-      BG=${colorscheme.Black}
+      FG=${config.pinpox.colors.White}
+      BG=${config.pinpox.colors.Black}
 
-      HDR_BTN_BG=${colorscheme.DarkGrey}
-      HDR_BTN_FG=${colorscheme.White}
+      HDR_BTN_BG=${config.pinpox.colors.BrightBlack}
+      HDR_BTN_FG=${config.pinpox.colors.White}
 
-      ACCENT_BG=${colorscheme.Green}
-      ACCENT_FG=${colorscheme.Black}
+      ACCENT_BG=${config.pinpox.colors.Green}
+      ACCENT_FG=${config.pinpox.colors.Black}
 
-      HDR_FG=${colorscheme.White}
-      HDR_BG=${colorscheme.Grey}
+      HDR_FG=${config.pinpox.colors.White}
+      HDR_BG=${config.pinpox.colors.BrightBlack}
 
-      MATERIA_SURFACE=${colorscheme.Grey}
-      MATERIA_VIEW=${colorscheme.DarkGrey}
+      MATERIA_SURFACE=${config.pinpox.colors.BrightBlack}
+      MATERIA_VIEW=${config.pinpox.colors.BrightBlack}
 
-      MENU_BG=${colorscheme.Grey}
-      MENU_FG=${colorscheme.BrightWhite}
+      MENU_BG=${config.pinpox.colors.BrightBlack}
+      MENU_FG=${config.pinpox.colors.BrightWhite}
 
-      SEL_BG=${colorscheme.Blue}
-      SEL_FG=${colorscheme.Magenta}
+      SEL_BG=${config.pinpox.colors.Blue}
+      SEL_FG=${config.pinpox.colors.Magenta}
 
-      TXT_BG=${colorscheme.Grey}
-      TXT_FG=${colorscheme.BrightWhite}
+      TXT_BG=${config.pinpox.colors.BrightBlack}
+      TXT_FG=${config.pinpox.colors.BrightWhite}
 
-      WM_BORDER_FOCUS=${colorscheme.White}
-      WM_BORDER_UNFOCUS=${colorscheme.BrightGrey}
+      WM_BORDER_FOCUS=${config.pinpox.colors.White}
+      WM_BORDER_UNFOCUS=${config.pinpox.colors.BrightBlack}
 
       UNITY_DEFAULT_LAUNCHER_STYLE=False
       NAME=generated
@@ -63,11 +63,11 @@ in
 
     nixpkgs.overlays = [
       (self: super: {
-        rendersvg = self.runCommandNoCC "rendersvg" { } ''
+        rendersvg = self.runCommand "rendersvg" { } ''
           mkdir -p $out/bin
           ln -s ${self.resvg}/bin/resvg $out/bin/rendersvg
         '';
-        generated-gtk-theme = self.stdenv.mkDerivation rec {
+        generated-gtk-theme = self.stdenv.mkDerivation {
 
           name = "generated-gtk-theme";
           src = materia-theme;
@@ -104,8 +104,8 @@ in
       enable = true;
 
       font = {
-        name = "Recursive Sans Linear Static Medium";
-        package = pkgs.recursive;
+        name = "Berkeley Mono";
+        # package = pkgs.iosevka;
       };
 
       iconTheme = {
@@ -117,9 +117,13 @@ in
         name = "Generated";
         package = pkgs.generated-gtk-theme;
       };
-      gtk3.extraConfig = {
-        gtk-cursor-theme-name = "breeze";
-        gtk-application-prefer-dark-theme = 1;
+
+      gtk3 = {
+
+        extraConfig = {
+          gtk-cursor-theme-name = "breeze";
+          gtk-application-prefer-dark-theme = 1;
+        };
       };
     };
 

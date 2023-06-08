@@ -24,9 +24,6 @@ in
       # useDHCP = false;
       # interfaces.eno1.useDHCP = true;
 
-      # Enable networkmanager
-      networkmanager.enable = true;
-
       # Configure network proxy if necessary
       # networking.proxy.default = "http://user:password@proxy:port/";
       # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
@@ -49,6 +46,11 @@ in
         5.181.48.121 mega.public
 
         # VPN protected services
+
+        192.168.7.1 vpn.motion.pablo.tools
+        192.168.7.1 vpn.octoprint.pablo.tools
+
+
         # 192.168.7.1 vpn.influx.pablo.tools
         192.168.7.1 vpn.alerts.pablo.tools
         192.168.7.1 vpn.prometheus.pablo.tools

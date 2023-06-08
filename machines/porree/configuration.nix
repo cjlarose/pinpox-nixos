@@ -1,9 +1,69 @@
-{ matrix-hook, ... }: {
+{ lib, matrix-hook, config, retiolum, alertmanager-ntfy, ... }: {
 
-  imports = [ ./hardware-configuration.nix matrix-hook.nixosModule ];
+  imports = [
+    ./hardware-configuration.nix
+    matrix-hook.nixosModule
+    alertmanager-ntfy.nixosModules.default
+    retiolum.nixosModules.retiolum
+    # ./retiolum.nix
+  ];
+
+  networking.interfaces.ens3 = {
+    ipv6.addresses = [{
+      address = "2a03:4000:51:aa3::1";
+      prefixLength = 64;
+    }];
+  };
+
+  lollypops.deployment.ssh.host = "94.16.108.229";
+
+  # Often hangs
+  systemd.services = {
+    NetworkManager-wait-online.enable = lib.mkForce false;
+    systemd-networkd-wait-online.enable = lib.mkForce false;
+  };
 
   # services.influxdb2.enable = true;
   # services.influxdb2.settings = { };
+
+  lollypops.secrets.files = {
+    "matrix-hook/envfile" = { };
+    "alertmanager-ntfy/envfile" = { };
+    "bitwarden_rs/envfile" = { };
+    "wireguard/private" = { };
+
+    "caddy/basicauth_beta" = { };
+    "caddy/basicauth_3dprint" = { };
+    "caddy/basicauth_notify" = { };
+
+    # "nginx/blog.passwd" = {
+    #   path = "/var/www/blog.passwd";
+    #   owner = "nginx";
+    # };
+
+    # "nginx/3dprint.passwd" = {
+    #   path = "/var/www/3dprint.passwd";
+    #   owner = "nginx";
+    # };
+    # "matrix-hook/alerts.passwd" = {
+    #   path = "/var/lib/matrix-hook/alerts.passwd";
+    #   owner = "nginx";
+    # };
+  };
+
+
+  networking.retiolum.ipv4 = "10.243.100.101";
+  networking.retiolum.ipv6 = "42:0:3c46:b51c:b34d:b7e1:3b02:8d24";
+
+  lollypops.secrets.files = {
+    "retiolum/rsa_priv" = { };
+    "retiolum/ed25519_priv" = { };
+  };
+
+  services.tinc.networks.retiolum = {
+    rsaPrivateKeyFile = "${config.lollypops.secrets.files."retiolum/rsa_priv".path}";
+    ed25519PrivateKeyFile = "${config.lollypops.secrets.files."retiolum/ed25519_priv".path}";
+  };
 
   programs.gnupg.agent = {
     enable = true;
@@ -45,243 +105,145 @@
   security.acme.acceptTerms = true;
   security.acme.defaults.email = "letsencrypt@pablo.tools";
 
-  services.nginx = {
+  # The difference between {$ and {env. is that {$ is evaluated before Caddyfile
+  # parsing begins, and {env. is evaluated at runtime. This matters if your
+  # config is adapted in a different environment from which it is being run.
 
-    # resolver = {
-    #   addresses = [
-    #     "1.1.1.1"
-    #   ];
-    # };
+  # To generated basic auth env vars:
+  # caddy hash-password --plaintext "hunter2"
+  # BASICAUTH_NOTIFY_PABLO_TOOLS='username $2a$XXXXXXXXXXXXXXXXXXXXXXXXXX'
+  # Test with: curl -X POST -d'test' https://username:hunter2@notify.pablo.tools/plain
 
+  systemd.services.caddy.serviceConfig.EnvironmentFile = [
+    config.lollypops.secrets.files."caddy/basicauth_beta".path
+    config.lollypops.secrets.files."caddy/basicauth_3dprint".path
+    config.lollypops.secrets.files."caddy/basicauth_notify".path
+  ];
+
+  # services.nginx.enable = false;
+
+  services.caddy = {
     enable = true;
-    recommendedOptimisation = true;
-    recommendedTlsSettings = true;
-    clientMaxBodySize = "128m";
-    recommendedProxySettings = true;
 
-    # Needed for vaultwarden, it seems to have trouble serving scripts for
-    # the frontend without it.
-    commonHttpConfig = ''
-      server_names_hash_bucket_size 128;
-      proxy_headers_hash_max_size 1024;
-      proxy_headers_hash_bucket_size 256;
+    # globalConfig = ''
+
+    #   @vpnonly {
+    #   remote_ip 192.168.0.0/16 172.168.7.0/16
+    #   }
+    # '';
+
+    # Handle errors for all pages
+    # respond "{err.status_code} {err.status_text}"
+    extraConfig = ''
+      :443, :80 {
+        handle_errors {
+         respond * "This page does not exist or is not for your eyes." {
+           close
+         }
+        }
+      }
     '';
 
-    # No need to support plain HTTP, forcing TLS for all vhosts. Certificates
-    # provided by Let's Encrypt via ACME. Generation and renewal is automatic
-    # if DNS is set up correctly for the (sub-)domains.
     virtualHosts = {
-      # Personal homepage and blog
-      "pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        root = "/var/www/pablo-tools";
-      };
+
+      # Homepage
+      "pablo.tools".extraConfig = ''
+        root * /var/www/pablo-tools
+        file_server
+        encode zstd gzip
+      '';
+
+      # Homepage (dev)
+      "beta.pablo.tools".extraConfig = ''
+        root * /var/www/pablo-tools-beta
+        file_server
+        encode zstd gzip
+        basicauth {
+          {$BASICAUTH_BETA_PABLO_TOOLS}
+        }
+      '';
+
+      # Camera (read-only) stream
+      "3dprint.pablo.tools".extraConfig = ''
+        reverse_proxy 192.168.2.121:8081
+        basicauth {
+          {$BASICAUTH_3DPRINT_PABLO_TOOLS}
+        }
+      '';
+
+      # Notifications API
+      "notify.pablo.tools".extraConfig = ''
+        reverse_proxy 127.0.0.1:11000
+        basicauth {
+          {$BASICAUTH_NOTIFY_PABLO_TOOLS}
+        }
+      '';
 
       # Password manager (vaultwarden) instance
-      "pass.pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://127.0.0.1:8222"; };
-      };
+      "pass.pablo.tools".extraConfig = "reverse_proxy 127.0.0.1:8222";
 
       # Photo gallery
-      "photos.pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://192.168.7.5:7788"; };
-      };
+      "photos.pablo.tools".extraConfig = "reverse_proxy 127.0.0.1:7788";
 
-      # Graphana
-      "status.pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = {
-          proxyWebsockets = true;
-          proxyPass = "http://127.0.0.1:9005";
-        };
-      };
+      # Grafana
+      "status.pablo.tools".extraConfig = "reverse_proxy 127.0.0.1:9005";
 
-      # InfluxDB
-      # "vpn.influx.pablo.tools" = {
-      #   listen = [{
-      #     addr = "192.168.7.1";
-      #     port = 443;
-      #     ssl = true;
-      #   }];
-      #   forceSSL = true;
-      #   enableACME = true;
-      #   locations."/" = { proxyPass = "http://127.0.0.1:8086"; };
-      # };
+      # Home-assistant
+      "home.pablo.tools".extraConfig = "reverse_proxy birne.wireguard:8123";
+
+      # Octoprint (set /etc/hosts for clients)
+      "vpn.octoprint.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly 192.168.2.121:5000
+      '';
 
       # Alertmanager
-      "vpn.alerts.pablo.tools" = {
-        listen = [{
-          addr = "192.168.7.1";
-          port = 443;
-          ssl = true;
-        }];
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://127.0.0.1:9093"; };
-      };
+      "vpn.alerts.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly 127.0.0.1:9093
+      '';
 
-      "vpn.prometheus.pablo.tools" = {
-        listen = [{
-          addr = "192.168.7.1";
-          port = 443;
-          ssl = true;
-        }];
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://127.0.0.1:9090"; };
-      };
+      # Prometheus
+      "vpn.prometheus.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly 127.0.0.1:9090
+      '';
 
-      "notify.pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://127.0.0.1:11000"; };
-        basicAuthFile = "/run/keys/alerts_htpasswd";
-      };
-
-      "vpn.notify.pablo.tools" = {
-        listen = [{
-          addr = "192.168.7.1";
-          port = 443;
-          ssl = true;
-        }];
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = { proxyPass = "http://127.0.0.1:11000"; };
-      };
-
-      "home.pablo.tools" = {
-        addSSL = true;
-        enableACME = true;
-        extraConfig = "proxy_buffering off;";
-        locations."/" = {
-          proxyPass = "http://birne.wireguard:8123";
-          proxyWebsockets = true;
-        };
-      };
+      # ntfy
+      "vpn.notify.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly 127.0.0.1:11000
+      '';
 
       # Minio admin console
-      "vpn.minio.pablo.tools" = {
-
-        listen = [{
-          addr = "192.168.7.1";
-          port = 443;
-          ssl = true;
-        }];
-
-        addSSL = true;
-        enableACME = true;
-
-        extraConfig = ''
-          # To allow special characters in headers
-          ignore_invalid_headers off;
-          # Allow any size file to be uploaded.
-          # Set to a value such as 1000m; to restrict file size to a specific value
-          client_max_body_size 0;
-          # To disable buffering
-          proxy_buffering off;
-        '';
-
-        locations = {
-          "/" = {
-            proxyPass = "http://birne.wireguard:9001";
-            extraConfig = ''
-
-
-
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-              proxy_set_header X-Forwarded-Proto $scheme;
-
-              # proxy_set_header Host $host;
-
-
-
-
-              proxy_connect_timeout 300;
-              # Default is HTTP/1, keepalive is only enabled in HTTP/1.1
-              proxy_http_version 1.1;
-              proxy_set_header Connection "";
-              chunked_transfer_encoding off;
-            '';
-          };
-        };
-      };
+      "vpn.minio.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly birne.wireguard:9001
+      '';
 
       # Minio s3 backend
-      "vpn.s3.pablo.tools" = {
+      "vpn.s3.pablo.tools".extraConfig = ''
+        @vpnonly {
+          remote_ip 192.168.0.0/16 172.168.7.0/16
+        }
+        reverse_proxy @vpnonly birne.wireguard:9000
+      '';
 
-        listen = [{
-          addr = "192.168.7.1";
-          port = 443;
-          ssl = true;
-        }];
-
-        addSSL = true;
-        enableACME = true;
-
-        extraConfig = ''
-          # To allow special characters in headers
-          ignore_invalid_headers off;
-          # Allow any size file to be uploaded.
-          # Set to a value such as 1000m; to restrict file size to a specific value
-          client_max_body_size 0;
-          # To disable buffering
-          proxy_buffering off;
-        '';
-
-        locations = {
-          "/" = {
-            proxyPass = "http://birne.wireguard:9000";
-            extraConfig = ''
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              # proxy_set_header Host $host;
-              proxy_connect_timeout 300;
-              # Default is HTTP/1, keepalive is only enabled in HTTP/1.1
-              proxy_http_version 1.1;
-              proxy_set_header Connection "";
-              chunked_transfer_encoding off;
-            '';
-          };
-        };
-      };
-
-      # Filebrowser
-      # "vpn.files.pablo.tools" = {
-      #   listen = [{
-      #     addr = "192.168.7.1";
-      #     port = 443;
-      #     ssl = true;
-      #   }];
-      #   forceSSL = true;
-      #   enableACME = true;
-      #   locations."/" = { proxyPass = "http://birne.wireguard:8787"; };
-      # };
     };
   };
-
 
   # Enable ip forwarding, so wireguard peers can reach eachother
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
-
-  # Deploy htpaswd file for external alerts
-  # Generate with: mkpasswd -m sha-512 (save as username:$6$E7UzqcDh3$Xi...)
-  # Test with: curl -X POST -d'test' https://user:password@notify.pablo.tools/plain
-  users.users.nginx = { extraGroups = [ "keys" ]; };
-  krops.secrets.files = {
-    alerts_htpasswd = {
-      owner = "nginx";
-      source-path = "/var/src/secrets/matrix-hook/alerts.passwd";
-    };
-  };
 
   pinpox = {
     server = {
@@ -294,16 +256,27 @@
       clientIp = "192.168.7.1";
     };
 
+    services.ntfy-sh.enable = true;
+
+    services.alertmanager-ntfy = {
+      enable = true;
+      httpAddress = "localhost";
+      httpPort = "9099";
+      ntfyTopic = "https://push.pablo.tools/pinpox_alertmanager";
+      ntfyPriority = "default";
+      envFile = "${config.lollypops.secrets.files."alertmanager-ntfy/envfile".path}";
+    };
+
     services.matrix-hook = {
       enable = true;
       httpAddress = "localhost";
       matrixHomeserver = "https://matrix.org";
       matrixUser = "@alertus-maximus:matrix.org";
       matrixRoom = "!ilXTQgAfoBlNBuDmsz:matrix.org";
-      envFile = "/var/src/secrets/matrix-hook/envfile";
+      envFile = "${config.lollypops.secrets.files."matrix-hook/envfile".path}";
       msgTemplatePath = "${
-          matrix-hook.packages."x86_64-linux".matrix-hook
-        }/bin/message.html.tmpl";
+matrix-hook.packages."x86_64-linux".matrix-hook
+}/bin/message.html.tmpl";
     };
 
     services.borg-backup.enable = true;
@@ -346,14 +319,14 @@
         "https://pablo.tools"
         "https://megaclan3000.de"
         "https://drone.lounge.rocks"
-        "https://lounge.rocks"
+        # "https://lounge.rocks"
         "https://pass.pablo.tools"
         # "https://vpn.pablo.tools"
         "https://pinpox.github.io/nixos/"
         "https://cache.lounge.rocks/nix-cache-info"
         "https://pads.0cx.de"
         "https://news.0cx.de"
-        "https://mm.0cx.de"
+        "https://git.0cx.de"
         "https://irc.0cx.de"
       ];
     };
@@ -371,7 +344,7 @@
       listenPort = 51820;
 
       # Path to the private key file
-      privateKeyFile = toString /var/src/secrets/wireguard/private;
+      privateKeyFile = "${config.lollypops.secrets.files."wireguard/private".path}";
       peers = [
         # kartoffel
         {
@@ -410,14 +383,14 @@
   services.vaultwarden = {
     enable = true;
     config = {
-      domain = "https://pass.pablo.tools:443";
-      signupsAllowed = true;
-
+      DOMAIN = "https://pass.pablo.tools";
+      SIGNUPS_ALLOWED = false;
+      INVITATIONS_ALLOWED = "true";
       # The rocketPort option should match the value of the port in the reverse-proxy
-      rocketPort = 8222;
+      ROCKET_PORT = 8222;
     };
 
     # The environment file contiains secrets and is stored in pass
-    environmentFile = /var/src/secrets/bitwarden_rs/envfile;
+    environmentFile = "${config.lollypops.secrets.files."bitwarden_rs/envfile".path}";
   };
 }

@@ -9,15 +9,37 @@ in
 
   config = mkIf cfg.enable {
 
-
     services.postgresql.package = pkgs.postgresql_13;
 
+    lollypops.secrets.files = {
+      "nextcloud/admin-pass" = {
+        # name = "nextcloud-admin-pass";
+        path = "/var/lib/nextcloud/admin-pass";
+        owner = "nextcloud";
+      };
+    };
+
+
+    services.phpfpm.pools.nextcloud.settings = {
+      "listen.owner" = config.services.caddy.user;
+      "listen.group" = config.services.caddy.group;
+    };
+
+
+
     services.nextcloud = {
+
+
       enable = true;
+
+      # Disable broken RC4 cipher which is only necessary if you're using
+      # Nextcloud's server-side encryption.
+      # https://github.com/NixOS/nixpkgs/pull/198470
+      enableBrokenCiphersForSSE = false;
 
       # Pin Nextcloud major version.
       # Refer to upstream docs for updating major versions
-      package = pkgs.nextcloud24;
+      package = pkgs.nextcloud26;
 
       # Use HTTPS for links
       https = true;
@@ -50,34 +72,76 @@ in
 
         # Admin user
         adminuser = "pinpox";
-        adminpassFile = "/run/keys/nextcloud-admin-pass";
+        adminpassFile = "${config.lollypops.secrets.files."nextcloud/admin-pass".path}";
 
         defaultPhoneRegion = "DE";
         extraTrustedDomains = [ "birne.wireguard" ];
         trustedProxies = [ "192.168.7.1" "94.16.108.229" "birne.wireguard" ];
       };
+
+      nginx.recommendedHttpHeaders = true;
+
+
     };
+
+
+
+    # redis.servers.nextcloud = {
+    #   enable = true;
+    #   user = "nextcloud";
+    #   port = 0;
+    # };
+
+    # To run nginx alongside caddy for nextcloud only
+    services.nginx.enable = false;
+    # services.nginx.virtualHosts."files.pablo.tools".listen = [{ addr = "0.0.0.0"; port = 8080; }];
+
+    # reverse_proxy http://127.0.0.1:8080
+    services.caddy.virtualHosts = {
+      "files.pablo.tools".extraConfig = ''
+
+        redir /.well-known/carddav /remote.php/dav 301
+        redir /.well-known/caldav /remote.php/dav 301
+
+        @forbidden {
+            path /.htaccess
+            path /data/*
+            path /config/*
+            path /db_structure
+            path /.xml
+            path /README
+            path /3rdparty/*
+            path /lib/*
+            path /templates/*
+            path /occ
+            path /console.php
+        }
+        respond @forbidden 404
+
+        root * ${config.services.nextcloud.package}
+        file_server
+        php_fastcgi unix//run/phpfpm/nextcloud.sock
+      '';
+    };
+
+
+    # reverse_proxy 127.0.0.2:9876
+    # services.caddy.virtualHosts."files.pablo.tools".extraConfig = ''
+    #   root * ${pkgs.nextcloud26}
+    #   file_server
+    # '';
 
     # Reverse proxy
-    services.nginx.virtualHosts = {
-      "files.pablo.tools" = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/" = {
-          proxyPass = "http://127.0.0.2:9876";
-          proxyWebsockets = true;
-        };
-      };
-    };
-
-    # Deploy admin account credentials
-    users.users.nextcloud = { extraGroups = [ "keys" ]; };
-    krops.secrets.files = {
-      nextcloud-admin-pass = {
-        owner = "nextcloud";
-        source-path = "/var/src/secrets/nextcloud/admin-pass";
-      };
-    };
+    # services.nginx.virtualHosts = {
+    #   "files.pablo.tools" = {
+    #     forceSSL = true;
+    #     enableACME = true;
+    #     locations."/" = {
+    #       proxyPass = "http://127.0.0.2:9876";
+    #       proxyWebsockets = true;
+    #     };
+    #   };
+    # };
 
     # Database configuration
     services.postgresql = {

@@ -1,15 +1,10 @@
-{ config
-, pkgs
-, lib
-, nur
-, wallpaper-generator
-, dotfiles-awesome
-, ...
-}: {
+{ system-config, pkgs, ... }:
+{
 
-  home.file = {
-    ".config/awesome".source = "${dotfiles-awesome}/dotfiles";
-    ".local/share/wallpaper-generator".source = wallpaper-generator;
+  home.keyboard = {
+    variant = "colemak";
+    layout = "us";
+    options = "caps:swapescape";
   };
 
   pinpox = {
@@ -23,22 +18,42 @@
       git.enable = true;
     };
 
-    programs = {
-      alacritty.enable = true;
-      chromium.enable = true;
-      dunst.enable = true;
-      picom.enable = true;
-      nvim.enable = true;
-      xscreensaver.enable = true;
-      firefox.enable = true;
-      tmux.enable = true;
-      wezterm.enable = true;
-      zk.enable = true;
-      rofi.enable = false;
-      go.enable = true;
-      awesome.enable = true;
-    };
+    services.ntfy-notify.enable = true;
+
+    programs =
+      let
+        inXserver = system-config.pinpox.services.xserver.enable;
+      in
+      {
+        pandoc.enable = true;
+        alacritty.enable = true;
+        zellij.enable = true;
+        chromium.enable = true;
+        nvim.enable = true;
+        firefox.enable = true;
+        tmux.enable = true;
+        wezterm.enable = true;
+        zk.enable = true;
+        go.enable = true;
+
+        # XServer only
+        rofi.enable = inXserver;
+        awesome.enable = inXserver;
+        xscreensaver.enable = inXserver;
+        dunst.enable = inXserver;
+        picom.enable = inXserver;
+
+        # Wayland only
+        foot.enable = !inXserver;
+        sway.enable = !inXserver;
+        swaylock.enable = !inXserver;
+        river.enable = !inXserver;
+        waybar.enable = !inXserver;
+        mako.enable = !inXserver;
+        kanshi.enable = !inXserver;
+      };
   };
+
 
   # Install these packages for my user
   home.packages = with pkgs; [
@@ -46,8 +61,7 @@
     # From nixpkgs
     inetutils
     nmap
-    retroarch
-    arandr
+    # retroarch
     # arduino
     # arduino-cli
     asciinema
@@ -61,7 +75,6 @@
     gtk_engines
     h # https://github.com/zimbatm/h
     htop
-    httpie
     fd
     hugo
     imagemagick
@@ -76,7 +89,6 @@
     nix-index
     openvpn
     papirus-icon-theme
-    recursive
     pavucontrol
     pkg-config
     playerctl
@@ -93,15 +105,14 @@
     viewnior
     vlc
     xarchiver
+    # recursive
     gnome.file-roller
-    xclip
     xfce.exo # thunar "open terminal here"
     xfce.thunar-archive-plugin
     xfce.thunar-volman
     xfce.tumbler # thunar thumbnails
     xfce.xfce4-volumed-pulse
     xfce.xfconf # thunar save settings
-    xorg.xrandr
     # yubioath-desktop
     # xfce.thunar
     (xfce.thunar.override {
@@ -111,6 +122,11 @@
         xfce.thunar-media-tags-plugin
       ];
     })
+  ] ++
+  # Packages only useful when using xserver
+  lib.optionals system-config.pinpox.services.xserver.enable [
+    arandr
+    xorg.xrandr
   ];
 
   xdg = {
@@ -140,6 +156,7 @@
   services = {
 
     # Applets, shown in tray
+
     # Networking
     network-manager-applet.enable = true;
 

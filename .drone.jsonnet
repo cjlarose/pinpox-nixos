@@ -17,7 +17,7 @@ local steps_hosts() = std.flatMap(function(host) [
   {
     name: 'Build host: %s' % host,
     commands: [
-      "nix build -v -L '.#nixosConfigurations.%s.config.system.build.toplevel'" % host,
+      "nix build -L '.#nixosConfigurations.%s.config.system.build.toplevel'" % host,
     ],
   },
   {
@@ -39,7 +39,7 @@ local steps_packages() = std.flatMap(function(package) [
     {
       name: 'Build package: %s' % package,
       commands: [
-        "nix build -v -L '.#%s'" % package,
+        "nix build -L '.#%s'" % package,
       ],
     },
     {
@@ -71,6 +71,12 @@ local steps_packages() = std.flatMap(function(package) [
   clone: { depth: 1 },
 
   steps: [
+	// {
+      // name: 'Notify Test',
+      // commands: [
+        // "nix run nixpkgs#curl -- -u $ntfy-user:$ntfy-pass -H 'Title: $DRONE_REPO build: $DRONE_BUILD_STATUS' -H 'Priority: low' -H 'Tags: drone,build,nixos' -d '[$DRONE_REPO] $DRONE_COMMIT '$DRONE_COMMIT_MESSAGE': $DRONE_BUILD_STATUS' https://push.pablo.tools/drone_build ",
+      // ],
+	// }
     {
       name: 'Show flake info',
       commands: [
@@ -84,22 +90,8 @@ local steps_packages() = std.flatMap(function(package) [
         "nix --experimental-features 'nix-command flakes' flake check --show-trace",
       ],
     },
-  ] + steps_hosts() + steps_packages(),
-
-  //
-  //	 {
-  //		"name": "Notify",
-  //		commands: [
-  //		|||
-  //			nix run 'github:nixos/nixpkgs#curl' -- -X POST \
-  //			-d"<p>🛠<fe0f> <strong><font color='#0000ff'>BUILD</font> </strong><code>[$DRONE_REPO_NAME]</code>\
-  //			>> $DRONE_BUILD_STATUS ($DRONE_BUILD_EVENT)</br>\
-  //			<blockquote>$DRONE_COMMIT_MESSAGE</br>$DRONE_REPO_LINK</blockquote>" \
-  //			https://notify:$NOTIFY_TOKEN@notify.pablo.tools/plain
-  //		|||
-  //		],
-  //	 }
-  //
+  ] + steps_hosts() + steps_packages() + [
+  ],
 
   environment: {
     LOGNAME: 'drone',
@@ -107,7 +99,7 @@ local steps_packages() = std.flatMap(function(package) [
   },
 
   trigger: {
-    branch: ['main'],
+    branch: ['main', 'go-task'],
     event: ['push'],
   },
 }

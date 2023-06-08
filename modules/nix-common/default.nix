@@ -19,7 +19,7 @@ in
               concatStringsSep "," (mapAttrsToList (n: v: ''${n}="${v}"'')
                 (filterAttrs (n: v: (builtins.typeOf v) == "string")
                   flake-self.inputs."${i}"))
-            }} ${toString flake-self.inputs."${i}".lastModified}'')
+                }} ${ toString flake-self.inputs."${i}".lastModified or 0 }'')
           (attrNames flake-self.inputs))}
       '';
     };
@@ -43,14 +43,17 @@ in
     # Allow unfree licenced packages
     nixpkgs.config.allowUnfree = true;
 
+    lollypops.secrets.files."nix/nix-access-tokens" = { };
+
     # Enable flakes
     nix = {
 
       # Enable flakes
-      package = pkgs.nixFlakes;
+      package = pkgs.nixVersions.stable;
       extraOptions = ''
         experimental-features = nix-command flakes
       '';
+      # !include ${config.lollypops.secrets.files."nix/nix-access-tokens".path}
 
       settings = {
 

@@ -1,6 +1,7 @@
-{ lib, nur, pkgs, config, flake-self, home-manager, wallpaper-generator, dotfiles-awesome, promterm, ... }:
+{ lib, nur, pkgs, config, flake-self, home-manager, wallpaper-generator, promterm, ... }:
 with lib;
-let cfg = config.pinpox.desktop;
+let
+  cfg = config.pinpox.desktop;
 in
 {
 
@@ -44,6 +45,21 @@ in
 
   config = mkIf cfg.enable {
 
+    services.greetd = {
+      enable = true;
+      settings = {
+        default_session = {
+          command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd start-river";
+          user = "greeter";
+        };
+      };
+    };
+
+    # programs.sway.enable = true;
+
+    # Enable networkmanager
+    networking.networkmanager.enable = true;
+
     # DON'T set useGlobalPackages! It's not necessary in newer
     # home-manager versions and does not work with configs using
     # nixpkgs.config`
@@ -53,7 +69,11 @@ in
     # there.
     # home-manager.extraSpecialArgs = flake-self.inputs;
     home-manager.extraSpecialArgs = {
-      inherit wallpaper-generator dotfiles-awesome flake-self nur promterm;
+      inherit wallpaper-generator flake-self nur promterm;
+
+      # Pass system configuration (top-level "config") to home-manager modules,
+      # so we can access it's values for conditional statements
+      system-config = config;
     };
 
     nixpkgs.overlays = [
@@ -88,9 +108,53 @@ in
       };
 
       services = {
-        xserver.enable = true;
+        xserver.enable = false;
         openssh.enable = true;
         borg-backup.enable = true;
+        restic-client = {
+          backup-paths-onsite = [ "/home/pinpox/Notes" "/home/pinpox" ];
+
+          backup-paths-exclude = [
+
+            "*.pyc"
+            "*/cache2"
+            "*/.go/pkg"
+            "*/.local/share/Steam"
+            "*/.config/chromium"
+            "*/.rustup"
+            "*/.config/discord"
+            "*/.container-diff"
+            "*/.gvfs/"
+            "*/.local/share/Trash"
+            "*/.mozilla/firefox"
+            "*/.npm/_cacache"
+            "*/.thumbnails"
+            "*/.ts3client"
+            "*/.vagrant.d"
+            "*/.vim"
+            "*/.vimtemp"
+            "*/Cache"
+            "*/Downloads"
+            "*/Seafile"
+            "*/.nextcloud"
+
+            "/home/pinpox/code"
+            # "*/code/nixpkgs"
+            # "/home/*/code/**/target/debug"
+            # "/home/*/code/github.com/pinpox/nixpkgs"
+            # "/home/*/code/github.com/NixOS/nixpkgs"
+
+            "*/VirtualBox VMs"
+            "discord/Cache"
+
+            "*/.BurpSuite"
+            "*/.cache"
+            "*/.cargo"
+            "*/.config/Signal"
+            "*/.arduino15/packages"
+            "*/.platformio"
+          ];
+        };
       };
 
       metrics.node.enable = true;
@@ -116,8 +180,11 @@ in
 
       # borgbackup
       # wezterm-nightly
+      acpi
+      macchanger
       arandr
       binutils
+      file
       git
       gnumake
       go
@@ -128,15 +195,15 @@ in
       nixfmt
       nodejs
       openvpn
-      python
       recursive
-      # iosevka
       ripgrep
       ruby
       time
       universal-ctags
       wget
       zola
+      freecad
+      prusa-slicer
     ];
 
     services.logind.extraConfig = ''
@@ -147,7 +214,8 @@ in
       # Use GRUB2 as EFI boot loader.
       loader.grub.useOSProber = true;
 
-      tmpOnTmpfs = false;
+      tmp.useTmpfs = false;
+
 
       # Encrypted drive to be mounted by the bootloader. Path of the device will
       # have to be changed for each install.
@@ -172,7 +240,7 @@ in
       enable = true;
       # Default package does not support all protocols. Use the full-featured
       # gnome version
-      package = lib.mkForce pkgs.gnome3.gvfs;
+      package = lib.mkForce pkgs.gnome.gvfs;
     };
 
     # This value determines the NixOS release from which the default

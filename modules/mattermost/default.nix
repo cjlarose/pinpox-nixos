@@ -33,18 +33,14 @@ in
       };
     };
 
-    # TODO reevaluate option on fresh install
-    # mkForce is required as postgres is disabled explicitely if not using
-    # services.mattermost.localDatabaseCreate
-    # Postgres is pinned to version 11 for now, EOL is November 9, 2023.
-    services.postgresql.enable = lib.mkForce true;
-    services.postgresql.package = pkgs.postgresql_11;
+
+    lollypops.secrets.files."mattermost/envfile" = { };
 
     systemd.services.mattermost = {
 
       serviceConfig = {
 
-        EnvironmentFile = "/var/src/secrets/mattermost/envfile";
+        EnvironmentFile = config.lollypops.secrets.files."mattermost/envfile".path;
 
         Environment = [
 

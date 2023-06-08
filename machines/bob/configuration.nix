@@ -1,10 +1,11 @@
-# Configuration for bob
-{ pkgs, ... }: {
+{ pkgs, mayniklas-keys, ... }: {
 
   imports = [ ./hardware-configuration.nix ];
 
   # Force non-default keyboard layout since this is a shared host
   console.keyMap = pkgs.lib.mkForce "de";
+
+  lollypops.deployment.ssh.host = "drone.lounge.rocks";
 
   /* services.nginx = {
     enable = true;
@@ -55,62 +56,26 @@
       # No backup from our side for this host.
       borg-backup.enable = false;
 
-      binary-cache.enable = true;
+      # binary-cache.enable = true;
       droneci.enable = true;
-      droneci.runner-exec.enable = true;
-      droneci.runner-docker.enable = true;
+      # droneci.runner-exec.enable = true;
+      # droneci.runner-docker.enable = true;
       monitoring-server.http-irc.enable = true;
     };
 
     metrics.node.enable = true;
   };
 
-  users.users.root.openssh.authorizedKeys.keyFiles = [
-    (pkgs.fetchurl {
-      url = "https://github.com/MayNiklas.keys";
-      sha256 = "sha256:174dbx0kkrfdfdjswdny25nf7phgcb9k8i6z3rqqcy9l24f8xcp3";
-    })
-  ];
-
-  boot = {
-
-    # Enable arm emulation capabilities
-    binfmt.emulatedSystems = [ "aarch64-linux" ];
-
-    growPartition = true;
-
-    loader = {
-      grub = {
-        enable = true;
-        version = 2;
-        device = "nodev";
-        efiSupport = true;
-        efiInstallAsRemovable = true;
-      };
-    };
-    cleanTmpDir = true;
-  };
+  users.users.root.openssh.authorizedKeys.keyFiles = [ mayniklas-keys ];
 
   networking = {
-
-    # DHCP
-    useDHCP = false;
-    interfaces.ens192.useDHCP = true;
-
     # Open ports in the firewall.
     firewall.allowedTCPPorts = [
       80
       443
       9100 # Node exporter. Host is behind external firewall
     ];
-
-    # Make the host resolv the cache to itself
-    extraHosts = ''
-      127.0.0.1 cache.lounge.rocks
-    '';
   };
-
-  virtualisation.vmware.guest.enable = true;
 
   # Workaround for problems with the dockerized CI
   systemd.enableUnifiedCgroupHierarchy = false;

@@ -33,16 +33,14 @@ in
 
   config = mkIf cfg.enable {
 
-    users.users.prometheus = { extraGroups = [ "keys" ]; };
-    krops.secrets.files = {
-      prometheus-home-assistant-token = {
+    lollypops.secrets.files = {
+      "prometheus/home-assistant-token" = {
         owner = "prometheus";
-        source-path = "/var/src/secrets/prometheus/home-assistant-token";
+        path = "/var/lib/prometheus2/home-assistant-token";
       };
-
-      prometheus-drone-token = {
+      "prometheus/drone-token" = {
         owner = "prometheus";
-        source-path = "/var/src/secrets/prometheus/drone-token";
+        path = "/var/lib/prometheus2/drone-token";
       };
     };
 
@@ -71,10 +69,31 @@ in
         [{ static_configs = [{ targets = [ "localhost:9093" ]; }]; }];
 
       scrapeConfigs = [
+        # TODO fix esp config
+        # {
+        #   job_name = "esphome";
+        #   scrape_interval = "30s";
+        #   scheme = "http";
+        #   static_configs = [{
+        #     targets = [
+        #       "http://192.168.2.145"
+        #       "http://192.168.2.146"
+        #     ];
+        #   }];
+        # }
+        # {
+        #   job_name = "esphome";
+        #   scheme = "http";
+        #   scrape_interval = "60s";
+        #   metrics_path = "/metrics";
+        #   static_configs = [{ targets = [ 
+        #     "192.168.2.147"
+        #   ]; }];
+        # }
         {
           job_name = "drone";
           scheme = "https";
-          bearer_token_file = "/run/keys/prometheus-drone-token";
+          bearer_token_file = config.lollypops.secrets.files."prometheus/drone-token".path;
           static_configs = [{ targets = [ "drone.lounge.rocks" ]; }];
         }
         {
@@ -88,7 +107,7 @@ in
           job_name = "homeassistant";
           scrape_interval = "60s";
           metrics_path = "/api/prometheus";
-          bearer_token_file = "/run/keys/prometheus-home-assistant-token";
+          bearer_token_file = config.lollypops.secrets.files."prometheus/home-assistant-token".path;
           scheme = "http";
           static_configs = [{ targets = [ "birne.wireguard:8123" ]; }];
         }
@@ -188,13 +207,22 @@ in
             group_by = [ "instance" ];
             group_wait = "30s";
             group_interval = "2m";
-            repeat_interval = "2h";
+            repeat_interval = "24h";
           };
 
-          receivers = [{
-            name = "all";
-            webhook_configs = [{ url = "http://127.0.0.1:11000/alert"; }];
-          }];
+
+          receivers = [
+            {
+              name = "all";
+              webhook_configs = [
+                { url = "http://127.0.0.1:11000/alert"; } # matrix-hook
+                {
+                  url = with config.pinpox.services.alertmanager-ntfy;
+                    "http://${httpAddress}:${httpPort}";
+                } # alertmanger-ntfy
+              ];
+            }
+          ];
         };
       };
     };

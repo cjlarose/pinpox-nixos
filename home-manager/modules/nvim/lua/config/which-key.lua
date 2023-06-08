@@ -19,22 +19,26 @@ wk.register({
 	["<leader>"] = {
 
 		-- FZF
-		F = { ':FzfLua git_files<CR>',  'Git files' },
-		f = { ':FzfLua files<CR>',   'Files' },
-		b = { ':FzfLua buffers<CR>', 'Buffers' },
+		F = { ':FzfLua git_files<CR>', 'Git files' },
+		f = { ':FzfLua files<CR>',     'Files' },
+		b = { ':FzfLua buffers<CR>',   'Buffers' },
+		q = { ':FzfLua quickfix<CR>',  'Quickfix' },
+		G = { ':FzfLua live_grep<CR>', 'Live Grep' },
 
 		r = { ':lua vim.lsp.buf.rename()<CR>', "Rename" },
 
-		h = {
-			name = "Help",
-			h = { ':lua vim.lsp.buf.hover()<CR>',                        'Hover information' },
+		c = {
+			name = "Code (LSP)",
+			a = { ':FzfLua lsp_code_actions<CR>',                        'Code actions' },
+			i = { ':lua vim.lsp.buf.hover()<CR>',                        'Hover information' },
 			s = { ':lua vim.lsp.buf.signature_help()<CR>',               'Signature' },
-			l = { ':lua vim.lsp.diagnostic.show_line_diagnostics()<CR>', 'Line diagnostics' },
-			g = { ':lua require"gitsigns".blame_line()<CR>',             'Git Blame line' },
+			S = { ':FzfLua lsp_document_symbols<CR>',                    'Symbols' },
+			d = { ':lua vim.lsp.diagnostic.show_line_diagnostics()<CR>', 'Line diagnostics' },
 		},
 
 		g = {
 			name = "Git",
+			b = { ':lua require"gitsigns".blame_line()<CR>',      'Git Blame line' },
 			s = { ':lua require"gitsigns".stage_hunk()<CR>',      'Stage hunk' },
 			u = { ':lua require"gitsigns".undo_stage_hunk()<CR>', 'Undo stage hunk' },
 			r = { ':lua require"gitsigns".reset_hunk()<CR>',      'Reset hunk' },
@@ -60,7 +64,7 @@ wk.register({
 		d = { ':lua vim.lsp.buf.definition()<CR>',       'Definition'},
 		t = { ':lua vim.lsp.buf.type_definition()<CR>',  'Type Definition'},
 		D = { ':lua vim.lsp.buf.declaration()<CR>',      'Declaration'},
-		r = { ':lua vim.lsp.buf.references()<CR>',       'References'},
+		r = { ':FzfLua lsp_references<CR>',              'References'},
 		i = { ':lua vim.lsp.buf.implementation()<CR>',   'Implementation'},
 		j = { ':lua vim.lsp.diagnostic.goto_next()<CR>', 'Next diagnostic' },
 		k = { ':lua vim.lsp.diagnostic.goto_prev()<CR>', 'Previuous diagnostic' },

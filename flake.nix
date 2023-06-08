@@ -3,17 +3,45 @@
 
   inputs = {
 
-    # mayniklas.url = "github:mayniklas/nixos";
-    # mayniklas.inputs = {
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    #   nixpkgs.follows = "nixpkgs";
-    #   flake-utils.follows = "flake-utils";
-    # };
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    aoe-taunt-discord-bot = {
+      url = "github:pinpox/aoe-taunt-discord-bot";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pinpox-keys = {
+      url = "https://github.com/pinpox.keys";
+      flake = false;
+    };
+
+    mayniklas-keys = {
+      url = "https://github.com/MayNiklas.keys";
+      flake = false;
+    };
+
+    mc3000 = {
+      url = "github:pinpox/mc3000";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    lollypops = {
+      url = "github:pinpox/lollypops";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     promterm.url = "github:pinpox/promterm";
     promterm.inputs = {
       nixpkgs.follows = "nixpkgs";
       utils.follows = "flake-utils";
+    };
+
+
+    go-karma-bot.url = "github:pinpox/go-karma-bot";
+    go-karma-bot.inputs = {
+      nixpkgs.follows = "nixpkgs";
     };
 
     s3photoalbum.url = "github:pinpox/s3photoalbum";
@@ -23,10 +51,10 @@
       # home-manager.follows = "home-manager";
     };
 
-    retiolum.url = "github:krebs/retiolum";
-    retiolum.flake = false;
+    # retiolum.url = "github:krebs/retiolum";
+    # retiolum.flake = false;
 
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    retiolum.url = "git+https://git.thalheim.io/Mic92/retiolum";
 
     flake-utils.url = "github:numtide/flake-utils";
 
@@ -38,25 +66,31 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     nur.url = "github:nix-community/NUR";
-    nur.inputs.nixpkgs.follows = "nixpkgs";
 
     wallpaper-generator.url = "github:pinpox/wallpaper-generator";
     wallpaper-generator.flake = false;
-    wallpaper-generator.inputs.nixpkgs.follows = "nixpkgs";
 
-    dotfiles-awesome.url = "github:pinpox/dotfiles-awesome";
-    dotfiles-awesome.inputs = {
-      nixpkgs.follows = "nixpkgs";
-      wallpaper-generator.follows = "wallpaper-generator";
-      flake-utils.follows = "flake-utils";
-      flake-compat.follows = "flake-compat";
-    };
+    # dotfiles-awesome.url = "github:pinpox/dotfiles-awesome";
+    # dotfiles-awesome.inputs = {
+    #   nixpkgs.follows = "nixpkgs";
+    #   wallpaper-generator.follows = "wallpaper-generator";
+    #   flake-utils.follows = "flake-utils";
+    #   flake-compat.follows = "flake-compat";
+    # };
 
     restic-exporter.url = "github:pinpox/restic-exporter";
     restic-exporter.inputs = {
       nixpkgs.follows = "nixpkgs";
       flake-utils.follows = "flake-utils";
-      flake-compat.follows = "flake-compat";
+    };
+
+    alertmanager-ntfy = {
+      url = "github:pinpox/alertmanager-ntfy";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+        flake-compat.follows = "flake-compat";
+      };
     };
 
     matrix-hook.url = "github:pinpox/matrix-hook";
@@ -104,23 +138,43 @@
     tfenv.url = "github:tfutils/tfenv";
     tfenv.flake = false;
 
-    nix-apple-fonts.url = "github:pinpox/nix-apple-fonts";
+    nix-apple-fonts = {
+      url = "github:pinpox/nix-apple-fonts";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
-    nix-apple-fonts.inputs.flake-compat.follows = "flake-compat";
-    nix-apple-fonts.inputs.flake-utils.follows = "flake-utils";
-    nix-apple-fonts.inputs.nixpkgs.follows = "nixpkgs";
+    vpub-plus-plus = {
+      url = "github:pinpox/vpub-plus-plus";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # helix-editor = {
+    #   url = "github:helix-editor/helix";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+
+    # zellij = {
+    #   url = "github:zellij-org/zellij";
+    #   inputs.flake-compat.follows = "flake-compat";
+    #   inputs.flake-utils.follows = "flake-utils";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
   };
   outputs = { self, ... }@inputs:
     with inputs;
     {
 
+
+
       # Expose overlay to flake outputs, to allow using it from other flakes.
       # Flake inputs are passed to the overlay so that the packages defined in
       # it can use the sources pinned in flake.lock
       overlays.default = final: prev: (import ./overlays inputs) final prev;
 
-      # Use nixpkgs-fmt for `nix fmt'
+      # Use nixpkgs-fmt for 'nix fmt'
       formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
 
       # Output all modules in ./modules to flake. Modules should be in
@@ -133,7 +187,7 @@
         (builtins.attrNames (builtins.readDir ./modules)));
 
       # Each subdirectory in ./machines is a host. Add them all to
-      # nixosConfiguratons. Host configurations need a file called
+      # nixosConfigurations. Host configurations need a file called
       # configuration.nix that will be read first
       nixosConfigurations = builtins.listToAttrs (map
         (x: {
@@ -152,6 +206,7 @@
               (./machines + "/${x}/configuration.nix")
               { imports = builtins.attrValues self.nixosModules; }
               home-manager.nixosModules.home-manager
+              restic-exporter.nixosModules.default
             ];
           };
         })
@@ -164,6 +219,8 @@
           imports = [
             ./home-manager/profiles/common.nix
             ./home-manager/profiles/server.nix
+            lollypops.hmModule
+
           ] ++
           (builtins.attrValues self.homeManagerModules);
         };
@@ -173,6 +230,7 @@
           imports = [
             ./home-manager/profiles/common.nix
             ./home-manager/profiles/desktop.nix
+            lollypops.hmModule
           ] ++
           (builtins.attrValues self.homeManagerModules);
         };
@@ -195,6 +253,21 @@
       */
 
       # nix build '.#base-image'
+      raspi-image =
+        let system = "aarch64-linux";
+        in
+        import "${nixpkgs}/nixos/lib/make-disk-image.nix" {
+          pkgs = nixpkgs.legacyPackages."${system}";
+          lib = nixpkgs.lib;
+          config = (nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [ ./images/raspi.nix ];
+          }).config;
+          format = "qcow2";
+          diskSize = 4096;
+          name = "raspi-image";
+        };
+
       base-image =
         let system = "x86_64-linux";
         in
@@ -215,25 +288,26 @@
     # All packages in the ./packages subfolder are also added to the flake.
     # flake-utils is used for this part to make each package available for each
     # system. This works as all packages are compatible with all architectures
-    (flake-utils.lib.eachSystem [ "aarch64-linux" "i686-linux" "x86_64-linux" "aarch64-darwin" "x86_64-darwin" ])
+    (flake-utils.lib.eachSystem [ "aarch64-linux" "x86_64-linux" "x86_64-darwin" ])
       (system:
         let pkgs = nixpkgs.legacyPackages.${system}.extend self.overlays.default;
-        in
-        rec {
+        in {
           # Custom packages added via the overlay are selectively exposed here, to
           # allow using them from other flakes that import this one.
           packages = flake-utils.lib.flattenTree {
             # wezterm-bin = pkgs.wezterm-bin;
-            wezterm-nightly = pkgs.wezterm-nightly;
+            # wezterm-nightly = pkgs.wezterm-nightly;
             hello-custom = pkgs.hello-custom;
             filebrowser = pkgs.filebrowser;
             darktile = pkgs.darktile;
             dirserver = pkgs.dirserver;
             fritzbox_exporter = pkgs.fritzbox_exporter;
             mqtt2prometheus = pkgs.mqtt2prometheus;
-            xscreensaver = pkgs.xscreensaver;
             smartmon-script = pkgs.smartmon-script;
             tfenv = pkgs.tfenv;
+
+            # Manual for github pages (https://pinpox.github.io/nixos)
+            flake-manual = pkgs.callPackage ./manual/manual.nix { inputs = inputs; flake-self = self; };
           };
 
           # Run with: nix develop '.#test-shell'
@@ -241,36 +315,44 @@
             test-shell = import ./shells/test-shell.nix { inherit pkgs; };
           };
 
-          apps = {
-            # Allow custom packages to be run using `nix run`
-            hello-custom = flake-utils.lib.mkApp { drv = packages.hello-custom; };
-            # wezterm-bin = flake-utils.lib.mkApp {
-            #   drv = packages.wezterm-bin;
-            #   exePath = "/bin/wezterm";
-            # };
-          };
+          # Allow custom packages to be run using `nix run`
+          apps =
+            let
+              configFlake = self;
+              # {
+              #   nixosConfigurations = {
+              #     host1 = nixpkgs.lib.nixosSystem {
+              #       system = "x86_64-linux";
+              #       modules = [ lollypops.nixosModules.lollypops ];
+              #     };
+              #   };
+              # };
+            in
+            {
+              # TODO for testing
+              # nix flake update --override-input lollypops ../lollypops
+              default = lollypops.apps."${system}".default { inherit configFlake; };
+              # hello-custom = flake-utils.lib.mkApp { drv = packages.hello-custom; };
+            };
 
           # Checks to run with `nix flake check -L`, will run in a QEMU VM.
           # Looks for all ./modules/<module name>/test.nix files and adds them to
           # the flake's checks output. The test.nix file is optional and may be
           # added to any module.
-          checks = builtins.listToAttrs (map
-            (x: {
-              name = x;
-              value = (import (./modules + "/${x}/test.nix")) {
-                pkgs = nixpkgs;
-                inherit system self;
-              };
-            })
-            (
-              # Filter list of modules, leaving only modules which contain a
-              # `test.nix` file
-              builtins.filter
-                (p: builtins.pathExists (./modules + "/${p}/test.nix"))
-                (builtins.attrNames (builtins.readDir ./modules))));
-
-          # TODO we probably should set some default app and/or package
-          # defaultPackage = packages.hello;
-          # defaultApp = apps.hello;
+          # checks = builtins.listToAttrs
+          #   (map
+          #     (x: {
+          #       name = x;
+          #       value = (import (./modules + "/${x}/test.nix")) {
+          #         pkgs = nixpkgs;
+          #         inherit system self;
+          #       };
+          #     })
+          #     (
+          #       # Filter list of modules, leaving only modules which contain a
+          #       # `test.nix` file
+          #       builtins.filter
+          #         (p: builtins.pathExists (./modules + "/${p}/test.nix"))
+          #         (builtins.attrNames (builtins.readDir ./modules))));
         });
 }

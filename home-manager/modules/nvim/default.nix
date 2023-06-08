@@ -1,6 +1,7 @@
-{ self, config, pkgs, lib, utils, colorscheme, ... }:
+{ config, pkgs, lib, utils, ... }:
 
 with lib;
+
 let
 
   cfg = config.pinpox.programs.nvim;
@@ -25,6 +26,7 @@ in
   config = mkIf cfg.enable {
 
     home.packages = with pkgs; [
+      nil
       nodePackages.pyright # LSP python
       nodePackages.yaml-language-server # LSP yaml
       nodePackages.vscode-json-languageserver-bin # LSP json
@@ -34,11 +36,11 @@ in
       # terraform # TODO add options to enable/disable large packages like terraform
       libgccjit # Needed for treesitter
       # sumneko-lua-language-server # Lua language server
-      omnisharp-roslyn # Csharp LSP
       cargo
       rustc
       rustfmt
       rust-analyzer
+      ltex-ls
     ];
 
     xdg = {
@@ -47,7 +49,7 @@ in
 
         nixcolors-lua = {
           target = "nvim/lua/nixcolors.lua";
-          source = utils.renderMustache "nixcolors.lua" ./nixcolors.lua.mustache colorscheme;
+          source = utils.renderMustache "nixcolors.lua" ./nixcolors.lua.mustache config.pinpox.colors;
         };
 
         nvim_lua_config = {
@@ -89,14 +91,13 @@ in
       lua << EOF
 
 
-      omnisharp_bin = "${pkgs.omnisharp-roslyn}/bin/omnisharp"
 
       local utils = require('utils')
 
       require('config.general') -- General options, should stay first!
       require('config.pinpox-colors')
       require('config.appearance')
-      -- require('config.treesitter')
+      require('config.treesitter')
       require('config.lsp')
       require('config.devicons')
       require('config.cmp')
@@ -119,7 +120,56 @@ in
       # loaded on launch
       plugins = with pkgs.vimPlugins; [
 
-        # nvim-treesitter
+        zig-vim
+
+        ccc-nvim
+
+
+        (nvim-treesitter.withPlugins (p: [
+          p.bash
+          p.c
+          p.comment # -- Comment tags like TODO FIXME(user).
+          # -- cooklang
+          p.css
+          p.diff
+          p.dockerfile
+          p.dot
+          p.fish
+          p.git_config
+          p.git_rebase
+          p.gitattributes
+          p.gitcommit
+          p.gitignore
+          p.go
+          # p.help
+          p.html
+          p.java
+          p.javascript
+          p.jq
+          p.json
+          p.json5
+          p.latex
+          p.lua
+          p.make
+          p.markdown
+          p.nix
+          p.php
+          p.python
+          p.regex
+          p.rust
+          p.scss
+          p.sql
+          p.terraform
+          p.toml
+          p.vim
+          p.vimdoc
+          p.yaml
+          p.zig
+        ]))
+
+        playground # Treesitter playground
+
+
         # zk-nvim
         # vim-visual-increment
         # vim-indent-object
