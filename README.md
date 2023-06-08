@@ -9,7 +9,7 @@ Add this flake to your flake's imports:
 ```nix
 {
   inputs = {
-    tfenv.url = "github:cjlarose/pinpox-nixos/tfenv";
+    tfenv.url = "github:cjlarose/tfenv-nix";
   };
 }
 ```
